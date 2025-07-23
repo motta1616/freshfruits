@@ -3,6 +3,7 @@ package com.freshfruits.usecase;
 import com.freshfruits.domain.common.exception.BusinessException;
 import com.freshfruits.domain.entities.CreateResponse;
 import com.freshfruits.domain.entities.Product;
+import com.freshfruits.domain.entities.ResponseSave;
 import com.freshfruits.domain.factories.BuildMessages;
 import com.freshfruits.domain.gateway.ProductRepository;
 import com.freshfruits.usecase.helpers.Traceability;
@@ -31,9 +32,15 @@ public class ProductController extends Traceability implements BuildMessages {
 
     private Mono<CreateResponse> saveProductProcess(Product product) {
         return productRepository.saveProduct(product)
-                .flatMap(products -> buildResponseBrule(product, INPUT_MESSAGE_BRULE.getMessage()))
+                .flatMap(responseSave -> validateResponse(responseSave, product))
                 .onErrorResume(throwable -> validateTraceError(product, throwable, SAVE_PRODUCT_PROCESS.getMessage())
                         .flatMap(productos1 -> validateResponseError(productos1, throwable)));
+    }
+
+    private Mono<CreateResponse> validateResponse(ResponseSave responseSave, Product product) {
+        return Boolean.TRUE.equals(responseSave.getStatus())
+                ? buildResponseSuccess(responseSave)
+                : buildResponseBrule(product, responseSave.getMessage());
     }
 
     private Mono<Product> traceIn(Product product) {
@@ -55,7 +62,7 @@ public class ProductController extends Traceability implements BuildMessages {
 
     private Mono<Product> validateTraceError(Product product, Throwable throwable, String operation) {
         return throwable instanceof BusinessException
-                ? traceLogIn(product, BRULE.getMessage(), throwable.getMessage(), operation)
-                : traceLogIn(product, ERROR.getMessage(), throwable.getMessage(), operation);
+                ? traceLogOut(product, BRULE.getMessage(), throwable.getMessage(), operation)
+                : traceLogOut(product, ERROR.getMessage(), throwable.getMessage(), operation);
     }
 }

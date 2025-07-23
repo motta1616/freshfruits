@@ -18,7 +18,7 @@ public class Traceability {
     }
 
     protected Mono<Product> traceLogOut(Product product, String status, String message, String operation ) {
-        log.info(String.format(TRACE_MESSAGE.getMessage(), product.getId(), "OUT", status, message, operation));
+        log.info(String.format(TRACE_MESSAGE.getMessage(), product.getId(), "OUT", status, message, operation, product));
         return Mono.just(product);
     }
 }
