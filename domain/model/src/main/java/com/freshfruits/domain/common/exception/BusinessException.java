@@ -8,8 +8,7 @@ public class BusinessException extends ApplicationException {
     @Getter
     public enum Type {
 
-        NULL_OR_EMPTY_FIELD("El valor del campo no puede ser nulo o vació. Campo:"),
-        ERROR_CANCEL_AND_RETURN("Los campos IsCancel y IsReturn no pueden ser iguales o nulos");
+        INPUT_MESSAGE_BRULE("El mensaje no contiene un id.");
 
         private final String message;
 

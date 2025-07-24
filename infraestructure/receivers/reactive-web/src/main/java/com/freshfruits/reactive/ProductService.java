@@ -2,29 +2,36 @@ package com.freshfruits.reactive;
 
 import com.freshfruits.reactive.dto.CreateResponseDto;
 import com.freshfruits.reactive.dto.ProductoDto;
+import com.freshfruits.reactive.mapper.BuildMessage;
 import com.freshfruits.reactive.mapper.CreateMapper;
 import com.freshfruits.usecase.ProductController;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/producto")
-public class ProductService {
+public class ProductService implements BuildMessage {
 
     private final ProductController productController;
 
     @PostMapping(path = "/crear", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<ResponseEntity<CreateResponseDto>> createProcess(
-            @RequestBody ProductoDto productoDto) {
+    public Mono<ResponseEntity<CreateResponseDto>> createProcess(@RequestBody ProductoDto productoDto) {
         return productController.createProduct(CreateMapper.INSTANCE.toDomain(productoDto))
                 .map(createResponse -> ResponseEntity.status(Integer.parseInt(createResponse.getStatus()))
                         .body(CreateMapper.INSTANCE.toDto(createResponse)));
+    }
+
+    @GetMapping(path = "/find", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<ResponseEntity<ProductoDto>> findProcess(@RequestBody ProductoDto productoDto) {
+        return productController.findProduct(CreateMapper.INSTANCE.toDomain(productoDto))
+                .map(product -> ResponseEntity.ok(CreateMapper.INSTANCE.toDto(product)))
+                .onErrorResume(throwable -> buildResponseError(throwable)
+                        .map(productDtoUpdate -> ResponseEntity
+                                .status(Integer.parseInt(productDtoUpdate.getStatus()))
+                                .body(productDtoUpdate)));
     }
 }

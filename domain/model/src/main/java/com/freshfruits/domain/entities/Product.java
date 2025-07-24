@@ -10,4 +10,6 @@ public class Product {
     private final String id;
     private final String nombre;
     private final Double precio;
+    private final String status;
+    private final String message;
 }

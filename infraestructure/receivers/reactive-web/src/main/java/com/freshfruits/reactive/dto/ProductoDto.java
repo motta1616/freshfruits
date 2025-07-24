@@ -14,4 +14,6 @@ public class ProductoDto {
     private String id;
     private String nombre;
     private Double precio;
+    private String status;
+    private String message;
 }

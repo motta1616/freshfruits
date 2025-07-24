@@ -9,10 +9,10 @@ import static com.freshfruits.domain.common.enums.Constants.*;
 
 public interface BuildMessages {
 
-    default Mono<CreateResponse> buildResponseSuccess(ResponseSave responseSave) {
+    default Mono<CreateResponse> buildResponseSuccess(String message) {
         return Mono.just(CreateResponse.builder()
                 .status(SUCCESS.getMessage())
-                .message(responseSave.getMessage())
+                .message(message)
                 .build());
     }
 
@@ -26,6 +26,13 @@ public interface BuildMessages {
     default Mono<CreateResponse> buildResponseTechnical(Product product, String message) {
         return Mono.just(CreateResponse.builder()
                 .status(INTERNAL_SERVER_ERROR.getMessage())
+                .message(String.format(message, product.getId()))
+                .build());
+    }
+
+    default Mono<Product> buildResponseFindBrule(Product product, String message) {
+        return Mono.just(Product.builder()
+                .status(BAD_REQUEST.getMessage())
                 .message(String.format(message, product.getId()))
                 .build());
     }

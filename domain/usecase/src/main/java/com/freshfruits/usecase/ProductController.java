@@ -5,29 +5,25 @@ import com.freshfruits.domain.entities.CreateResponse;
 import com.freshfruits.domain.entities.Product;
 import com.freshfruits.domain.entities.ResponseSave;
 import com.freshfruits.domain.factories.BuildMessages;
+import com.freshfruits.domain.factories.ValidateField;
 import com.freshfruits.domain.gateway.ProductRepository;
 import com.freshfruits.usecase.helpers.Traceability;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
 
-import java.util.Optional;
-
 import static com.freshfruits.domain.common.enums.Constants.*;
 
 @RequiredArgsConstructor
-public class ProductController extends Traceability implements BuildMessages {
+public class ProductController extends Traceability implements BuildMessages, ValidateField {
 
     private final ProductRepository productRepository;
 
     public Mono<CreateResponse> createProduct(Product product) {
-        return Optional.ofNullable(product.getId()).isPresent()
-                ? traceIn(product)
-                .flatMap(this::createProcess)
-                : traceInError(product);
-    }
-
-    private Mono<CreateResponse> createProcess(Product product) {
-        return saveProductProcess(product);
+        return validateId(product.getId())
+                ? traceIn(product, OK.getMessage(), INPUT_MESSAGE_CREATE_OK.getMessage(), CREATE_PRODUCT.getMessage())
+                .flatMap(this::saveProductProcess)
+                : traceIn(product, BRULE.getMessage(), INPUT_MESSAGE_BRULE.getMessage(), CREATE_PRODUCT.getMessage())
+                .then(buildResponseBrule(product, INPUT_MESSAGE_BRULE.getMessage()));
     }
 
     private Mono<CreateResponse> saveProductProcess(Product product) {
@@ -39,19 +35,14 @@ public class ProductController extends Traceability implements BuildMessages {
 
     private Mono<CreateResponse> validateResponse(ResponseSave responseSave, Product product) {
         return Boolean.TRUE.equals(responseSave.getStatus())
-                ? buildResponseSuccess(responseSave)
+                ? buildResponseSuccess(responseSave.getMessage())
                 : buildResponseBrule(product, responseSave.getMessage());
     }
 
-    private Mono<Product> traceIn(Product product) {
-        return traceLogIn(product, OK.getMessage(), INPUT_MESSAGE_OK.getMessage(),
-                CREATE_PRODUCT.getMessage());
-    }
-
-    private Mono<CreateResponse> traceInError(Product productos) {
-        return traceLogIn(productos, BRULE.getMessage(), INPUT_MESSAGE_BRULE.getMessage(),
-                CREATE_PRODUCT.getMessage())
-                .flatMap(product -> buildResponseBrule(product, INPUT_MESSAGE_BRULE.getMessage()));
+    private Mono<Product> validateTraceError(Product product, Throwable throwable, String operation) {
+        return throwable instanceof BusinessException
+                ? traceLogOut(product, BRULE.getMessage(), throwable.getMessage(), operation)
+                : traceLogOut(product, ERROR.getMessage(), throwable.getMessage(), operation);
     }
 
     private Mono<CreateResponse> validateResponseError(Product product, Throwable throwable) {
@@ -60,9 +51,15 @@ public class ProductController extends Traceability implements BuildMessages {
                 : buildResponseTechnical(product, throwable.getMessage());
     }
 
-    private Mono<Product> validateTraceError(Product product, Throwable throwable, String operation) {
-        return throwable instanceof BusinessException
-                ? traceLogOut(product, BRULE.getMessage(), throwable.getMessage(), operation)
-                : traceLogOut(product, ERROR.getMessage(), throwable.getMessage(), operation);
+    public Mono<Product> findProduct(Product product) {
+        return validateId(product.getId())
+                ? traceIn(product, OK.getMessage(), INPUT_MESSAGE_FIND_OK.getMessage(), FIND_PRODUCT.getMessage())
+                .thenReturn(product)
+                : traceIn(product, BRULE.getMessage(), INPUT_MESSAGE_BRULE.getMessage(), FIND_PRODUCT.getMessage())
+                .then(Mono.error(new BusinessException(BusinessException.Type.INPUT_MESSAGE_BRULE)));
+    }
+
+    private Mono<Product> traceIn(Product product, String status, String message, String operation) {
+        return traceLogIn(product, status, message, operation);
     }
 }

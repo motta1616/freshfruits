@@ -6,6 +6,7 @@ import com.freshfruits.domain.entities.Product;
 import com.freshfruits.domain.entities.ResponseSave;
 import com.freshfruits.domain.gateway.ProductRepository;
 import com.freshfruits.postgresql.data.ResponseSaveDto;
+import com.freshfruits.postgresql.mapper.BuildMessage;
 import com.freshfruits.postgresql.mapper.ProductMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +24,7 @@ import static com.freshfruits.postgresql.enums.PostgresEnum.*;
 @Slf4j
 @Repository
 @RequiredArgsConstructor
-public class InventoryRepositoryAdapter implements ProductRepository {
+public class InventoryRepositoryAdapter implements ProductRepository, BuildMessage {
 
     @Value("${function.save.product}")
     private String functionSaveProduct;
@@ -43,13 +44,6 @@ public class InventoryRepositoryAdapter implements ProductRepository {
         } catch (Exception e) {
             return Mono.error(e);
         }
-    }
-
-    private ResponseSaveDto buildResponseSave(io.r2dbc.spi.Readable rowMetadata) {
-        return ResponseSaveDto.builder()
-                .status(rowMetadata.get("status", Boolean.class))
-                .message(rowMetadata.get("message", String.class))
-                .build();
     }
 
     private Mono<ResponseSave> mapperSaveProduct(ResponseSaveDto responseSaveDto) {

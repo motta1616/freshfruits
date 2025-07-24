@@ -14,4 +14,5 @@ public interface CreateMapper {
 
     Product toDomain(ProductoDto productoDto);
     CreateResponseDto toDto(CreateResponse createResponse);
+    ProductoDto toDto(Product product);
 }
