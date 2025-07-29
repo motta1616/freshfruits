@@ -2,6 +2,7 @@ package com.freshfruits.reactive;
 
 import com.freshfruits.reactive.dto.CreateResponseDto;
 import com.freshfruits.reactive.dto.ProductoDto;
+import com.freshfruits.reactive.dto.ProductsRequestDto;
 import com.freshfruits.reactive.mapper.BuildMessage;
 import com.freshfruits.reactive.mapper.CreateMapper;
 import com.freshfruits.usecase.ProductController;
@@ -10,6 +11,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -33,5 +36,15 @@ public class ProductService implements BuildMessage {
                         .map(productDtoUpdate -> ResponseEntity
                                 .status(Integer.parseInt(productDtoUpdate.getStatus()))
                                 .body(productDtoUpdate)));
+    }
+
+    @GetMapping(path = "/allFind", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<ResponseEntity<List<ProductoDto>>> allFindProcess(@RequestBody ProductsRequestDto productsRequestDto) {
+        return productController.allFindProduct(CreateMapper.INSTANCE.toDomain(productsRequestDto))
+                .map(products -> ResponseEntity.ok(CreateMapper.INSTANCE.toDto(products)))
+                .onErrorResume(throwable -> buildResponseError(throwable)
+                        .map(productDtoUpdate -> ResponseEntity
+                                .status(Integer.parseInt(productDtoUpdate.getStatus()))
+                                .body(List.of(productDtoUpdate))));
     }
 }

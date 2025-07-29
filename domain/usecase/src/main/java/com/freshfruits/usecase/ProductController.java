@@ -3,6 +3,7 @@ package com.freshfruits.usecase;
 import com.freshfruits.domain.common.exception.BusinessException;
 import com.freshfruits.domain.entities.CreateResponse;
 import com.freshfruits.domain.entities.Product;
+import com.freshfruits.domain.entities.ProductsRequest;
 import com.freshfruits.domain.entities.ResponseSave;
 import com.freshfruits.domain.factories.BuildMessages;
 import com.freshfruits.domain.factories.ValidateField;
@@ -11,6 +12,7 @@ import com.freshfruits.usecase.helpers.Traceability;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
 import java.util.Optional;
 
 import static com.freshfruits.domain.common.enums.Constants.*;
@@ -79,5 +81,10 @@ public class ProductController extends Traceability implements BuildMessages, Va
         return throwable instanceof IllegalArgumentException
                 ? traceLogOut(product, BRULE.getMessage(), throwable.getMessage(), operation)
                 : traceLogOut(product, ERROR.getMessage(), throwable.getMessage(), operation);
+    }
+
+    public Mono<List<Product>> allFindProduct(ProductsRequest productsRequest) {
+        return Mono.just(productsRequest)
+                .thenReturn(List.of(Product.builder().build()));
     }
 }
