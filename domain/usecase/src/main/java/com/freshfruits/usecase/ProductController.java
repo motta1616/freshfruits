@@ -23,9 +23,9 @@ public class ProductController extends Traceability implements BuildMessages, Va
 
     public Mono<CreateResponse> createProduct(Product product) {
         return validateFieldString(product.getId())
-                ? traceLogIn(product, OK.getMessage(), INPUT_MESSAGE_CREATE_OK.getMessage(), CREATE_PRODUCT.getMessage())
+                ? traceLogProductIn(product, OK.getMessage(), INPUT_MESSAGE_CREATE_OK.getMessage(), CREATE_PRODUCT.getMessage())
                 .flatMap(this::saveProductProcess)
-                : traceLogIn(product, BRULE.getMessage(), INPUT_MESSAGE_BRULE.getMessage(), CREATE_PRODUCT.getMessage())
+                : traceLogProductIn(product, BRULE.getMessage(), INPUT_MESSAGE_BRULE.getMessage(), CREATE_PRODUCT.getMessage())
                 .then(buildResponseBrule(product, INPUT_MESSAGE_BRULE.getMessage()));
     }
 
@@ -52,9 +52,9 @@ public class ProductController extends Traceability implements BuildMessages, Va
 
     public Mono<Product> findProduct(Product product) {
         return validateFieldString(product.getId())
-                ? traceLogIn(product, OK.getMessage(), INPUT_MESSAGE_FIND_OK.getMessage(), FIND_PRODUCT.getMessage())
+                ? traceLogProductIn(product, OK.getMessage(), INPUT_MESSAGE_FIND_OK.getMessage(), FIND_PRODUCT.getMessage())
                 .flatMap(this::findProductProcess)
-                : traceLogIn(product, BRULE.getMessage(), INPUT_MESSAGE_BRULE.getMessage(), FIND_PRODUCT.getMessage())
+                : traceLogProductIn(product, BRULE.getMessage(), INPUT_MESSAGE_BRULE.getMessage(), FIND_PRODUCT.getMessage())
                 .then(Mono.error(new BusinessException(BusinessException.Type.INPUT_MESSAGE_BRULE)));
     }
 
@@ -78,6 +78,9 @@ public class ProductController extends Traceability implements BuildMessages, Va
 
     private Mono<ProductsRequest> validatePage(ProductsRequest productsRequest) {
         return validatePageNumber(productsRequest)
-                .then(validatePageSize(productsRequest));
+                .flatMap(this::validatePageSize)
+                .onErrorResume(throwable -> traceLogPageIn(productsRequest,
+                        BRULE.getMessage(), throwable.getMessage(), VALIDATE_PAGE.getMessage())
+                        .then(Mono.error(throwable)));
     }
 }
