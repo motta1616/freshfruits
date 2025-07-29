@@ -13,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
-import java.util.Optional;
 
 import static com.freshfruits.domain.common.enums.Constants.*;
 
@@ -23,10 +22,10 @@ public class ProductController extends Traceability implements BuildMessages, Va
     private final ProductRepository productRepository;
 
     public Mono<CreateResponse> createProduct(Product product) {
-        return validateId(product.getId())
-                ? traceIn(product, OK.getMessage(), INPUT_MESSAGE_CREATE_OK.getMessage(), CREATE_PRODUCT.getMessage())
+        return validateFieldString(product.getId())
+                ? traceLogIn(product, OK.getMessage(), INPUT_MESSAGE_CREATE_OK.getMessage(), CREATE_PRODUCT.getMessage())
                 .flatMap(this::saveProductProcess)
-                : traceIn(product, BRULE.getMessage(), INPUT_MESSAGE_BRULE.getMessage(), CREATE_PRODUCT.getMessage())
+                : traceLogIn(product, BRULE.getMessage(), INPUT_MESSAGE_BRULE.getMessage(), CREATE_PRODUCT.getMessage())
                 .then(buildResponseBrule(product, INPUT_MESSAGE_BRULE.getMessage()));
     }
 
@@ -52,29 +51,18 @@ public class ProductController extends Traceability implements BuildMessages, Va
     }
 
     public Mono<Product> findProduct(Product product) {
-        return validateId(product.getId())
-                ? traceIn(product, OK.getMessage(), INPUT_MESSAGE_FIND_OK.getMessage(), FIND_PRODUCT.getMessage())
+        return validateFieldString(product.getId())
+                ? traceLogIn(product, OK.getMessage(), INPUT_MESSAGE_FIND_OK.getMessage(), FIND_PRODUCT.getMessage())
                 .flatMap(this::findProductProcess)
-                : traceIn(product, BRULE.getMessage(), INPUT_MESSAGE_BRULE.getMessage(), FIND_PRODUCT.getMessage())
+                : traceLogIn(product, BRULE.getMessage(), INPUT_MESSAGE_BRULE.getMessage(), FIND_PRODUCT.getMessage())
                 .then(Mono.error(new BusinessException(BusinessException.Type.INPUT_MESSAGE_BRULE)));
     }
 
     private Mono<Product> findProductProcess(Product product) {
         return productRepository.findProduct(product.getId())
-                .flatMap(productFind -> validateResponseFind(productFind, product))
                 .onErrorResume(throwable -> validateTraceError(product, throwable,
                         FIND_PRODUCT_PROCESS.getMessage())
                         .then(Mono.error(throwable)));
-    }
-
-    private Mono<Product> validateResponseFind(Product productFind, Product product) {
-        return Optional.ofNullable(productFind.getId()).isPresent()
-                ? Mono.just(product)
-                : Mono.error(new BusinessException(BusinessException.Type.OUTPUT_MESSAGE_FIND_BRULE, product.getId()));
-    }
-
-    private Mono<Product> traceIn(Product product, String status, String message, String operation) {
-        return traceLogIn(product, status, message, operation);
     }
 
     private Mono<Product> validateTraceError(Product product, Throwable throwable, String operation) {
@@ -84,7 +72,12 @@ public class ProductController extends Traceability implements BuildMessages, Va
     }
 
     public Mono<List<Product>> allFindProduct(ProductsRequest productsRequest) {
-        return Mono.just(productsRequest)
-                .thenReturn(List.of(Product.builder().build()));
+        return validatePage(productsRequest)
+                .flatMap(productsRequest1 -> Mono.just(List.of(Product.builder().build())));
+    }
+
+    private Mono<ProductsRequest> validatePage(ProductsRequest productsRequest) {
+        return validatePageNumber(productsRequest)
+                .then(validatePageSize(productsRequest));
     }
 }

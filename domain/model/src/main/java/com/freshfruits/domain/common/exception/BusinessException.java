@@ -9,7 +9,8 @@ public class BusinessException extends ApplicationException {
     public enum Type {
 
         INPUT_MESSAGE_BRULE("El mensaje no contiene un id."),
-        OUTPUT_MESSAGE_FIND_BRULE("No se encontro registro para el id:");
+        VALIDATE_PAGE_NUMBER("EL campo pageNumber no puede ser vacio"),
+        VALIDATE_PAGE_SIZE("EL campo pageSize no puede ser vacio"),;
 
         private final String message;
 
