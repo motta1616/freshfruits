@@ -8,7 +8,8 @@ public class BusinessException extends ApplicationException {
     @Getter
     public enum Type {
 
-        INPUT_MESSAGE_BRULE("El mensaje no contiene un id.");
+        INPUT_MESSAGE_BRULE("El mensaje no contiene un id."),
+        OUTPUT_MESSAGE_FIND_BRULE("No se encontro registro para el id:");
 
         private final String message;
 

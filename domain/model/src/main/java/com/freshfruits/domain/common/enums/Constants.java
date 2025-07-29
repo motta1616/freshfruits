@@ -16,6 +16,7 @@ public enum Constants {
     INPUT_MESSAGE_BRULE("El mensaje no contiene un id."),
     INPUT_MESSAGE_FIND_OK("El mensaje para consultar se recibio de forma correcta"),
     SAVE_PRODUCT_PROCESS("save-product-process"),
+    FIND_PRODUCT_PROCESS("find-product-process"),
     CREATE_PRODUCT("create-product"),
     FIND_PRODUCT("find-product");
 

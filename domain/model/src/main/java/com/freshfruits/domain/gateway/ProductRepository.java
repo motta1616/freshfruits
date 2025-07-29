@@ -7,4 +7,5 @@ import reactor.core.publisher.Mono;
 public interface ProductRepository {
 
     Mono<ResponseSave> saveProduct(Product product);
+    Mono<Product> findProduct(String id);
 }

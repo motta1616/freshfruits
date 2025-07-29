@@ -11,6 +11,8 @@ import com.freshfruits.usecase.helpers.Traceability;
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Mono;
 
+import java.util.Optional;
+
 import static com.freshfruits.domain.common.enums.Constants.*;
 
 @RequiredArgsConstructor
@@ -28,25 +30,21 @@ public class ProductController extends Traceability implements BuildMessages, Va
 
     private Mono<CreateResponse> saveProductProcess(Product product) {
         return productRepository.saveProduct(product)
-                .flatMap(responseSave -> validateResponse(responseSave, product))
-                .onErrorResume(throwable -> validateTraceError(product, throwable, SAVE_PRODUCT_PROCESS.getMessage())
-                        .flatMap(productos1 -> validateResponseError(productos1, throwable)));
+                .flatMap(responseSave -> validateResponseSave(responseSave, product))
+                .onErrorResume(throwable -> validateTraceError(product, throwable,
+                        SAVE_PRODUCT_PROCESS.getMessage())
+                        .flatMap(productSave -> validateResponseError(productSave, throwable)));
     }
 
-    private Mono<CreateResponse> validateResponse(ResponseSave responseSave, Product product) {
+    private Mono<CreateResponse> validateResponseSave(ResponseSave responseSave, Product product) {
         return Boolean.TRUE.equals(responseSave.getStatus())
                 ? buildResponseSuccess(responseSave.getMessage())
-                : buildResponseBrule(product, responseSave.getMessage());
-    }
-
-    private Mono<Product> validateTraceError(Product product, Throwable throwable, String operation) {
-        return throwable instanceof BusinessException
-                ? traceLogOut(product, BRULE.getMessage(), throwable.getMessage(), operation)
-                : traceLogOut(product, ERROR.getMessage(), throwable.getMessage(), operation);
+                : traceLogOut(product, BRULE.getMessage(), responseSave.getMessage(), SAVE_PRODUCT_PROCESS.getMessage())
+                .then(buildResponseBrule(product, responseSave.getMessage()));
     }
 
     private Mono<CreateResponse> validateResponseError(Product product, Throwable throwable) {
-        return throwable instanceof BusinessException
+        return throwable instanceof IllegalArgumentException
                 ? buildResponseBrule(product, throwable.getMessage())
                 : buildResponseTechnical(product, throwable.getMessage());
     }
@@ -54,12 +52,32 @@ public class ProductController extends Traceability implements BuildMessages, Va
     public Mono<Product> findProduct(Product product) {
         return validateId(product.getId())
                 ? traceIn(product, OK.getMessage(), INPUT_MESSAGE_FIND_OK.getMessage(), FIND_PRODUCT.getMessage())
-                .thenReturn(product)
+                .flatMap(this::findProductProcess)
                 : traceIn(product, BRULE.getMessage(), INPUT_MESSAGE_BRULE.getMessage(), FIND_PRODUCT.getMessage())
                 .then(Mono.error(new BusinessException(BusinessException.Type.INPUT_MESSAGE_BRULE)));
     }
 
+    private Mono<Product> findProductProcess(Product product) {
+        return productRepository.findProduct(product.getId())
+                .flatMap(productFind -> validateResponseFind(productFind, product))
+                .onErrorResume(throwable -> validateTraceError(product, throwable,
+                        FIND_PRODUCT_PROCESS.getMessage())
+                        .then(Mono.error(throwable)));
+    }
+
+    private Mono<Product> validateResponseFind(Product productFind, Product product) {
+        return Optional.ofNullable(productFind.getId()).isPresent()
+                ? Mono.just(product)
+                : Mono.error(new BusinessException(BusinessException.Type.OUTPUT_MESSAGE_FIND_BRULE, product.getId()));
+    }
+
     private Mono<Product> traceIn(Product product, String status, String message, String operation) {
         return traceLogIn(product, status, message, operation);
+    }
+
+    private Mono<Product> validateTraceError(Product product, Throwable throwable, String operation) {
+        return throwable instanceof IllegalArgumentException
+                ? traceLogOut(product, BRULE.getMessage(), throwable.getMessage(), operation)
+                : traceLogOut(product, ERROR.getMessage(), throwable.getMessage(), operation);
     }
 }
