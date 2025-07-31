@@ -40,4 +40,13 @@ public class Traceability {
                 message, operation, productsRequest));
         return Mono.just(productsRequest);
     }
+
+    protected Mono<ProductsRequest> traceLogPageOut(ProductsRequest productsRequest,
+                                        String status,
+                                        String message,
+                                        String operation ) {
+
+        log.info(String.format(TRACE_MESSAGE.getMessage(), "N/A", "OUT", status, message, operation, productsRequest));
+        return Mono.just(productsRequest);
+    }
 }

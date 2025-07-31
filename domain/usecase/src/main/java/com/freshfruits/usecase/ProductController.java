@@ -73,7 +73,23 @@ public class ProductController extends Traceability implements BuildMessages, Va
 
     public Mono<List<Product>> allFindProduct(ProductsRequest productsRequest) {
         return validatePage(productsRequest)
-                .flatMap(productsRequest1 -> Mono.just(List.of(Product.builder().build())));
+                .flatMap(this::allFindProductProcess);
+    }
+
+    private Mono<List<Product>> allFindProductProcess(ProductsRequest productsRequest) {
+        return productRepository.allFindProduct(productsRequest)
+                .onErrorResume(throwable -> validateTraceAllError(productsRequest, throwable,
+                        ALL_FIND_PRODUCT_PROCESS.getMessage())
+                        .then(Mono.error(throwable)));
+    }
+
+    private Mono<ProductsRequest> validateTraceAllError(ProductsRequest productsRequest,
+                                                      Throwable throwable,
+                                                      String operation) {
+
+        return throwable instanceof IllegalArgumentException
+                ? traceLogPageOut(productsRequest, BRULE.getMessage(), throwable.getMessage(), operation)
+                : traceLogPageOut(productsRequest, ERROR.getMessage(), throwable.getMessage(), operation);
     }
 
     private Mono<ProductsRequest> validatePage(ProductsRequest productsRequest) {

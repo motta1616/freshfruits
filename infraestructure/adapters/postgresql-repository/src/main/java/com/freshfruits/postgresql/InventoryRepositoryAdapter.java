@@ -3,6 +3,7 @@ package com.freshfruits.postgresql;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.freshfruits.domain.common.exception.ObjectMapperException;
 import com.freshfruits.domain.entities.Product;
+import com.freshfruits.domain.entities.ProductsRequest;
 import com.freshfruits.domain.entities.ResponseSave;
 import com.freshfruits.domain.gateway.ProductRepository;
 import com.freshfruits.postgresql.data.ResponseSaveDto;
@@ -19,6 +20,7 @@ import reactor.util.retry.Retry;
 import reactor.util.retry.RetryBackoffSpec;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.function.Predicate;
 
 import static com.freshfruits.postgresql.enums.PostgresEnum.*;
@@ -33,6 +35,9 @@ public class InventoryRepositoryAdapter implements ProductRepository, BuildMessa
 
     @Value("${function.find.product}")
     private String functionFindProduct;
+
+    @Value("${function.all.find.product}")
+    private String functionAllFindProduct;
 
     private final R2dbcEntityTemplate r2dbcEntityTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -66,6 +71,23 @@ public class InventoryRepositoryAdapter implements ProductRepository, BuildMessa
         }
     }
 
+    @Override
+    public Mono<List<Product>> allFindProduct(ProductsRequest productsRequest) {
+        try {
+            return r2dbcEntityTemplate.getDatabaseClient().sql(functionAllFindProduct)
+                    .bind("pageSize", productsRequest.getPageSize())
+                    .bind("pageNumber", productsRequest.getPageNumber())
+                    .map((row, rowMetadata) -> buildResponseFind(row))
+                    .all()
+                    .collectList()
+                    .switchIfEmpty(Mono.error(new IllegalArgumentException("No se encontró el producto: ")))
+                    .flatMap(this::mapperAllFindProduct)
+                    .retryWhen(getRetrySpec(throwable -> !(throwable instanceof IllegalArgumentException)));
+        } catch (Exception e) {
+            return Mono.error(e);
+        }
+    }
+
     private Mono<ResponseSave> mapperSaveProduct(ResponseSaveDto responseSaveDto) {
         try {
             return Mono.just(ProductMapper.INSTANCE.toDomainSave(responseSaveDto));
@@ -80,6 +102,15 @@ public class InventoryRepositoryAdapter implements ProductRepository, BuildMessa
             return Mono.just(ProductMapper.INSTANCE.toDomainFind(productoDto));
         } catch (Exception exception) {
             throw new ObjectMapperException("Error al mapear la respuesta del find. Error: "
+                    .concat(exception.getMessage()));
+        }
+    }
+
+    private Mono<List<Product>> mapperAllFindProduct(List<ProductoDto> productoDtos) {
+        try {
+            return Mono.just(ProductMapper.INSTANCE.toDomainAllFind(productoDtos));
+        } catch (Exception exception) {
+            throw new ObjectMapperException("Error al mapear la respuesta del allFind. Error: "
                     .concat(exception.getMessage()));
         }
     }

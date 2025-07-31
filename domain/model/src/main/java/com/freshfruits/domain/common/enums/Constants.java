@@ -19,7 +19,8 @@ public enum Constants {
     FIND_PRODUCT_PROCESS("find-product-process"),
     CREATE_PRODUCT("create-product"),
     FIND_PRODUCT("find-product"),
-    VALIDATE_PAGE("validate-page");
+    VALIDATE_PAGE("validate-page"),
+    ALL_FIND_PRODUCT_PROCESS("all-fin.product-process");
 
     private final String message;
 

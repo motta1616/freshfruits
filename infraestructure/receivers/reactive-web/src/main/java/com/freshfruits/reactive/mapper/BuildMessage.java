@@ -10,7 +10,7 @@ public interface BuildMessage {
         return Mono.just(ProductoDto.builder()
                 .status((throwable instanceof BusinessException || throwable instanceof IllegalArgumentException)
                         ? "400"
-                        : "5000")
+                        : "500")
                 .message(throwable.getMessage())
                 .build());
     }
