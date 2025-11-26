@@ -23,9 +23,11 @@ public class ProductController extends Traceability implements BuildMessages, Va
 
     public Mono<CreateResponse> createProduct(Product product) {
         return validateFieldString(product.getId())
-                ? traceLogProductIn(product, OK.getMessage(), INPUT_MESSAGE_CREATE_OK.getMessage(), CREATE_PRODUCT.getMessage())
-                .flatMap(this::saveProductProcess)
-                : traceLogProductIn(product, BRULE.getMessage(), INPUT_MESSAGE_BRULE.getMessage(), CREATE_PRODUCT.getMessage())
+                ? traceLogProductIn(product, OK.getMessage(), INPUT_MESSAGE_CREATE_OK.getMessage(),
+                CREATE_PRODUCT.getMessage())
+                .then(saveProductProcess(product))
+                : traceLogProductIn(product, BRULE.getMessage(), INPUT_MESSAGE_BRULE.getMessage(),
+                CREATE_PRODUCT.getMessage())
                 .then(buildResponseBrule(product, INPUT_MESSAGE_BRULE.getMessage()));
     }
 
@@ -39,7 +41,8 @@ public class ProductController extends Traceability implements BuildMessages, Va
 
     private Mono<CreateResponse> validateResponseSave(ResponseSave responseSave, Product product) {
         return Boolean.TRUE.equals(responseSave.getStatus())
-                ? buildResponseSuccess(responseSave.getMessage())
+                ? traceLogOut(product, OK.getMessage(), responseSave.getMessage(), SAVE_PRODUCT_PROCESS.getMessage())
+                .then(buildResponseSuccess(responseSave.getMessage()))
                 : traceLogOut(product, BRULE.getMessage(), responseSave.getMessage(), SAVE_PRODUCT_PROCESS.getMessage())
                 .then(buildResponseBrule(product, responseSave.getMessage()));
     }
@@ -53,7 +56,7 @@ public class ProductController extends Traceability implements BuildMessages, Va
     public Mono<Product> findProduct(Product product) {
         return validateFieldString(product.getId())
                 ? traceLogProductIn(product, OK.getMessage(), INPUT_MESSAGE_FIND_OK.getMessage(), FIND_PRODUCT.getMessage())
-                .flatMap(this::findProductProcess)
+                .then(findProductProcess(product))
                 : traceLogProductIn(product, BRULE.getMessage(), INPUT_MESSAGE_BRULE.getMessage(), FIND_PRODUCT.getMessage())
                 .then(Mono.error(new BusinessException(BusinessException.Type.INPUT_MESSAGE_BRULE)));
     }
@@ -68,7 +71,9 @@ public class ProductController extends Traceability implements BuildMessages, Va
     private Mono<Product> validateTraceError(Product product, Throwable throwable, String operation) {
         return throwable instanceof IllegalArgumentException
                 ? traceLogOut(product, BRULE.getMessage(), throwable.getMessage(), operation)
-                : traceLogOut(product, ERROR.getMessage(), throwable.getMessage(), operation);
+                .thenReturn(product)
+                : traceLogOut(product, ERROR.getMessage(), throwable.getMessage(), operation)
+                .thenReturn(product);
     }
 
     public Mono<List<Product>> allFindProduct(ProductsRequest productsRequest) {
@@ -83,20 +88,25 @@ public class ProductController extends Traceability implements BuildMessages, Va
                         .then(Mono.error(throwable)));
     }
 
-    private Mono<ProductsRequest> validateTraceAllError(ProductsRequest productsRequest,
-                                                      Throwable throwable,
-                                                      String operation) {
-
-        return throwable instanceof IllegalArgumentException
-                ? traceLogPageOut(productsRequest, BRULE.getMessage(), throwable.getMessage(), operation)
-                : traceLogPageOut(productsRequest, ERROR.getMessage(), throwable.getMessage(), operation);
-    }
-
     private Mono<ProductsRequest> validatePage(ProductsRequest productsRequest) {
         return validatePageNumber(productsRequest)
                 .flatMap(this::validatePageSize)
-                .onErrorResume(throwable -> traceLogPageIn(productsRequest,
+                .flatMap(productsRequests -> traceLogProductIn(productsRequests, OK.getMessage(),
+                        INPUT_MESSAGE_ALL_FIND_OK.getMessage(), VALIDATE_PAGE.getMessage())
+                        .thenReturn(productsRequests))
+                .onErrorResume(throwable -> traceLogProductIn(productsRequest,
                         BRULE.getMessage(), throwable.getMessage(), VALIDATE_PAGE.getMessage())
                         .then(Mono.error(throwable)));
+    }
+
+    private Mono<ProductsRequest> validateTraceAllError(ProductsRequest productsRequest,
+                                                        Throwable throwable,
+                                                        String operation) {
+
+        return throwable instanceof IllegalArgumentException
+                ? traceLogOut(productsRequest, BRULE.getMessage(), throwable.getMessage(), operation)
+                .thenReturn(productsRequest)
+                : traceLogOut(productsRequest, ERROR.getMessage(), throwable.getMessage(), operation)
+                .thenReturn(productsRequest);
     }
 }
